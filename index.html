@@ -203,6 +203,16 @@ textarea.copybox { width: 100%; min-height: 150px; margin-top: 8px; border: 1px 
 .wtile small { font-weight: 400; font-size: 13px; color: var(--muted); }
 .wtile[aria-pressed="true"], .wseg button[aria-pressed="true"], .wdays button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .wnote { margin-top: 14px; }
+.whouse { display: grid; gap: 8px; }
+.wrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 8px 12px; min-height: 56px; font-weight: 600; }
+.wrow select { font: inherit; color: inherit; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 6px 10px; min-height: 40px; }
+.wstep { display: flex; align-items: center; gap: 4px; }
+.wstep b { min-width: 34px; text-align: center; font-family: var(--font-display); font-size: 22px; font-variant-numeric: tabular-nums; }
+.wstep button { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--bg); font-size: 20px; font-weight: 600; cursor: pointer; padding: 0; }
+.wh3 { font-size: 18px; margin: 22px 0 4px; }
+.wchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.wchips button { border: 1.5px solid var(--line); background: var(--surface); border-radius: 99px; padding: 7px 13px; min-height: 38px; font-weight: 500; font-size: 14px; cursor: pointer; }
+.wchips button[aria-pressed="true"] { border-color: var(--meat-ink); background: var(--meat-soft); color: var(--meat-ink); text-decoration: line-through; }
 .wbig { font-family: var(--font-display); font-weight: 700; font-size: 72px; line-height: 1; text-align: center; margin: 18px 0 24px; font-variant-numeric: tabular-nums; }
 .wbig small { font-family: var(--font-body); font-size: 16px; font-weight: 500; color: var(--muted); }
 .wseg, .wdays { display: grid; gap: 6px; }
@@ -223,7 +233,7 @@ textarea.copybox { width: 100%; min-height: 150px; margin-top: 8px; border: 1px 
   <header class="top">
     <div>
       <h1>Semaine à table</h1>
-      <p class="sub">2 adultes, 2 enfants · Drive Intermarché de Clermont-l’Hérault</p>
+      <p class="sub" id="sub">Drive Intermarché de Clermont-l’Hérault</p>
     </div>
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" data-act="tab" data-tab="menu" id="tab-menu">Dîners</button>
@@ -502,8 +512,27 @@ var APLABEL = { four: 'Four', cookeo: 'Cookeo', plaques: 'Plaques', airfryer: 'A
 var HAVE = { four: true, cookeo: true, micro: true };
 var COOK = [true, true, true, true, true, true, true];
 var LMODE = 'rest';
-function mainOk(m) { return m.ap.every(function (a) { return HAVE[a]; }); }
-function softOk(x) { return x.ap.every(function (a) { return HAVE[a] || (a === 'cookeo' && HAVE.plaques); }); }
+/* Le foyer : adultes, âges des enfants, aliments que la famille n’aime pas */
+var ADULTS = 2, KIDS = [8, 8], DIS = {};
+var DISL = [['poisson','Poisson'],['saumon','Saumon'],['oeuf','Œufs'],['boeuf','Bœuf'],['porc','Porc'],['dinde','Dinde'],['poulet','Poulet'],['jambon','Jambon'],['epinard','Épinards'],['carotte','Carottes'],['potimarron','Potimarron'],['brocoli','Brocoli'],['chou','Chou-fleur'],['celeri','Céleri'],['courgette','Courgettes'],['haricot','Haricots verts'],['tomate','Tomate'],['concombre','Concombre'],['moutarde','Moutarde'],['curry','Curry, coco'],['fromage','Fromage râpé ou fondu'],['pates','Pâtes'],['riz','Riz'],['semoule','Semoule, blé']];
+var DISRE = { saumon: /saumon/, boeuf: /bœuf|steak/, porc: /porc/, dinde: /dinde/, poulet: /poulet/, jambon: /jambon/, epinard: /épinard/, carotte: /carotte/, potimarron: /potimarron/, brocoli: /brocoli/, chou: /chou/, celeri: /céleri/, courgette: /courgette/, haricot: /haricot/, tomate: /tomate/, concombre: /concombre/, moutarde: /moutarde/, curry: /curry|coco/, fromage: /emmental|parmesan|fromage allégé/, pates: /pâtes|lasagne/, riz: /riz/, semoule: /semoule|blé/ };
+function bad(x) {
+  if (!x._t) x._t = (x.nom + ' ' + x.ing.map(function (g) { return g.n; }).join(' ')).toLowerCase();
+  for (var k in DIS) {
+    if (!DIS[k]) continue;
+    if (k === 'poisson' ? x.t === 'poisson' : k === 'oeuf' ? x.t === 'oeuf' : (DISRE[k] && DISRE[k].test(x._t))) return true;
+  }
+  return false;
+}
+function liked(arr) { var a = arr.filter(function (x) { return !bad(x); }); return a.length ? a : arr; }
+function kidPart(a) { return a <= 3 ? 0.4 : a <= 6 ? 0.5 : a <= 10 ? 0.7 : a <= 14 ? 0.9 : 1; }
+function units() { return ADULTS + KIDS.reduce(function (t, a) { return t + kidPart(a); }, 0); }
+function lunchU() { return 1 + (KIDS.length ? kidPart(KIDS[0]) : 0); }
+function plur(n, w) { return n + ' ' + w + (n > 1 ? 's' : ''); }
+function who() { return plur(ADULTS, 'adulte') + (KIDS.length ? ' et ' + plur(KIDS.length, 'enfant') : ''); }
+function lunchWho() { return KIDS.length ? '1 adulte et 1 enfant' : '1 adulte'; }
+function mainOk(m) { return !bad(m) && m.ap.every(function (a) { return HAVE[a]; }); }
+function softOk(x) { return !bad(x) && x.ap.every(function (a) { return HAVE[a] || (a === 'cookeo' && HAVE.plaques); }); }
 function dpool() { return DINNER.filter(function (m) { return m.min <= MAXMIN && mainOk(m); }); }
 var DVEGS0 = VEGS.filter(function (v) { return v.k !== 'crudites'; });
 function dvegs() { return DVEGS0.filter(softOk); }
@@ -546,17 +575,21 @@ function genPlan(seed) {
   for (var tries = 0; tries < 600; tries++) {
     var fishPos = pick(combos, rnd);
     var P = dpool(), WHITE = P.filter(function (m) { return !isSpecial(m); }), SPECIAL = P.filter(isSpecial);
-    if (!SPECIAL.length) continue;
-    var sp = pick(SPECIAL, rnd);
-    var spFish = sp.t === 'poisson';
-    var fish = shuffle(WHITE.filter(function (m) { return m.t === 'poisson'; }), rnd).slice(0, spFish ? 2 : 3);
-    if (spFish) fish = shuffle(fish.concat([sp]), rnd);
-    var meat = shuffle(WHITE.filter(function (m) { return m.t === 'viande'; }), rnd).slice(0, spFish ? 3 : 2);
-    var egg = shuffle(WHITE.filter(function (m) { return m.t === 'oeuf'; }), rnd).slice(0, 1);
-    if (fish.length < (spFish ? 2 : 3) || meat.length < (spFish ? 3 : 2) || egg.length < 1) continue;
-    var rest = shuffle(meat.concat(egg, spFish ? [] : [sp]), rnd);
+    var sp = SPECIAL.length ? pick(SPECIAL, rnd) : null;
+    var spFish = !!sp && sp.t === 'poisson';
+    var wf = shuffle(WHITE.filter(function (m) { return m.t === 'poisson'; }), rnd);
+    var wm = shuffle(WHITE.filter(function (m) { return m.t === 'viande'; }), rnd);
+    var we = shuffle(WHITE.filter(function (m) { return m.t === 'oeuf'; }), rnd);
+    var fishW = wf.slice(0, spFish ? 2 : 3);
+    var chosen = fishW.concat(we.slice(0, 1), sp ? [sp] : []);
+    var extra = wm.concat(shuffle(wf.slice(fishW.length).concat(we.slice(1)), rnd));
+    while (chosen.length < 7 && extra.length) chosen.push(extra.shift());
+    if (chosen.length < 7) continue;
+    var fl = shuffle(chosen.filter(function (m) { return m.t === 'poisson'; }), rnd);
+    var rest = shuffle(chosen.filter(function (m) { return m.t !== 'poisson'; }), rnd);
     var mains = [], fi = 0, mi = 0;
-    for (var i = 0; i < 7; i++) mains.push(fishPos.indexOf(i) >= 0 ? fish[fi++] : rest[mi++]);
+    if (fl.length <= 3) { var pos = fishPos.slice(0, fl.length); for (var i = 0; i < 7; i++) mains.push(pos.indexOf(i) >= 0 ? fl[fi++] : rest[mi++]); }
+    else mains = shuffle(chosen, rnd);
     var need = mains.filter(function (m) { return !m.inclus; }).length;
     var kinds = shuffle(['puree', 'puree', 'puree', 'puree', 'puree', 'epinards', 'epinards'], rnd).slice(0, need);
     var used = {}, ok = true, vegs = [];
@@ -564,6 +597,7 @@ function genPlan(seed) {
       if (!ok) return;
       var opts = shuffle(dvegs().filter(function (v) { return v.k === kind && !used[v.id]; }), rnd);
       if (!opts.length) opts = shuffle(dvegs().filter(function (v) { return !used[v.id]; }), rnd);
+      if (!opts.length) opts = shuffle(dvegs(), rnd);
       if (!opts.length) { ok = false; return; }
       used[opts[0].id] = 1; vegs.push(opts[0].id);
     });
@@ -585,23 +619,23 @@ function ensureVeg(plan, i, rnd) {
 function pickKS(arr, i, rnd, avoidCur) {
   var d = arr[i];
   var near = [arr[i - 1] && arr[i - 1].ks, arr[i + 1] && arr[i + 1].ks];
-  var c = KSIDES.filter(function (x) { return near.indexOf(x.id) < 0 && (!avoidCur || x.id !== d.ks); });
-  if (!c.length) c = KSIDES.filter(function (x) { return !avoidCur || x.id !== d.ks; });
-  d.ks = pick(c, rnd).id;
+  var c = liked(KSIDES).filter(function (x) { return near.indexOf(x.id) < 0 && (!avoidCur || x.id !== d.ks); });
+  if (!c.length) c = liked(KSIDES).filter(function (x) { return !avoidCur || x.id !== d.ks; });
+  if (c.length) d.ks = pick(c, rnd).id; else if (!d.ks) d.ks = liked(KSIDES)[0].id;
 }
 function pickLV(arr, i, rnd, avoidCur) {
   var d = arr[i];
   var near = [arr[i - 1] && arr[i - 1].v, arr[i + 1] && arr[i + 1].v];
   var c = dvegs().filter(function (x) { return near.indexOf(x.id) < 0 && (!avoidCur || x.id !== d.v); });
   if (!c.length) c = dvegs().filter(function (x) { return !avoidCur || x.id !== d.v; });
-  d.v = pick(c, rnd).id;
+  if (c.length) d.v = pick(c, rnd).id; else if (!d.v) d.v = (dvegs()[0] || DVEGS0[0]).id;
 }
 function pickST(arr, i, rnd, avoidCur) {
   var d = arr[i];
   var near = [arr[i - 1] && arr[i - 1].st, arr[i + 1] && arr[i + 1].st];
-  var c = STARCHES.filter(function (x) { return near.indexOf(x.id) < 0 && (!avoidCur || x.id !== d.st); });
-  if (!c.length) c = STARCHES.filter(function (x) { return !avoidCur || x.id !== d.st; });
-  d.st = pick(c, rnd).id;
+  var c = liked(STARCHES).filter(function (x) { return near.indexOf(x.id) < 0 && (!avoidCur || x.id !== d.st); });
+  if (!c.length) c = liked(STARCHES).filter(function (x) { return !avoidCur || x.id !== d.st; });
+  if (c.length) d.st = pick(c, rnd).id; else if (!d.st) d.st = liked(STARCHES)[0].id;
 }
 function genLunch(seed) {
   var rnd = rngFrom(seed + 7);
@@ -609,10 +643,13 @@ function genLunch(seed) {
     var lmax = LMODE === 'quick' ? Math.min(MAXMIN, 25) : MAXMIN;
     var lp = LUNCHES.filter(function (l) { return l.min <= lmax && softOk(l); });
     if (lp.length < 7) lp = LUNCHES.filter(softOk);
-    if (lp.length < 7) lp = LUNCHES;
-    var p = shuffle(lp, rnd).slice(0, 7);
-    if (p.filter(function (l) { return l.rouge; }).length > 1) continue;
-    if (!p.some(function (l) { return l.t === 'poisson'; })) continue;
+    if (!lp.length) lp = liked(LUNCHES);
+    var p = shuffle(lp, rnd);
+    while (p.length < 7) p = p.concat(shuffle(lp, rnd));
+    p = p.slice(0, 7);
+    var hasFish = lp.some(function (l) { return l.t === 'poisson'; });
+    if (lp.length >= 7 && p.filter(function (l) { return l.rouge; }).length > 1) continue;
+    if (hasFish && lp.length >= 7 && !p.some(function (l) { return l.t === 'poisson'; })) continue;
     var arr = p.map(function (l) { return { l: l.id, ks: null, v: null, st: null, off: false, rest: true }; });
     arr.forEach(function (x, i) { x.off = LMODE === 'none'; x.rest = LMODE === 'rest' || LMODE === 'none' || (LMODE === 'mix' && i % 2 === 1); });
     for (var i = 0; i < 7; i++) { pickKS(arr, i, rnd, false); pickLV(arr, i, rnd, false); pickST(arr, i, rnd, false); }
@@ -629,7 +666,7 @@ function newSeed() { return Math.floor(Math.random() * 2147483000) + 1; }
 
 function fresh() {
   var seed = newSeed();
-  return { start: tomorrow(), seed: seed, plan: genPlan(seed), lunch: genLunch(seed), checked: {}, custom: [], basicsOff: {}, tab: 'menu', target: 1414, reserve: 520, maxMin: MAXMIN, have: HAVE, cook: COOK, lmode: LMODE, setup: false, needFit: true };
+  return { start: tomorrow(), seed: seed, plan: genPlan(seed), lunch: genLunch(seed), checked: {}, custom: [], basicsOff: {}, tab: 'menu', target: 1414, reserve: 520, maxMin: MAXMIN, have: HAVE, cook: COOK, lmode: LMODE, adults: ADULTS, kids: KIDS, dis: DIS, setup: false, needFit: true };
 }
 function valid(s) {
   if (!s || !Array.isArray(s.plan) || s.plan.length !== 7 || !Array.isArray(s.lunch) || s.lunch.length !== 7) return false;
@@ -645,13 +682,16 @@ function load() {
       if (!(s.target > 0)) s.target = 1414;
       if (!s.maxMin) { s.maxMin = 30; s.needFit = true; }
       MAXMIN = s.maxMin;
+      if (s.adults >= 1 && s.adults <= 8) ADULTS = s.adults; else s.adults = ADULTS;
+      if (Array.isArray(s.kids)) KIDS = s.kids; else s.kids = KIDS;
+      if (s.dis && typeof s.dis === 'object') DIS = s.dis; else s.dis = DIS;
       if (s.have && typeof s.have === 'object') HAVE = s.have; else s.have = HAVE;
       if (Array.isArray(s.cook) && s.cook.length === 7) COOK = s.cook; else s.cook = COOK;
       if (['none', 'rest', 'quick', 'mix'].indexOf(s.lmode) >= 0) LMODE = s.lmode; else s.lmode = LMODE;
       s.lunch.forEach(function (d, i) { if (typeof d.rest !== 'boolean') d.rest = i > 0; if (!STARCH[d.st]) d.st = STARCHES[(i % 3) + 1].id; });
       if (!(s.reserve >= 0)) s.reserve = 520;
       if (s.tab !== 'menu' && s.tab !== 'lunch' && s.tab !== 'list') s.tab = 'menu';
-      if (!s.plan.some(function (d) { return isSpecial(MAIN[d.m]); })) s.needFit = true;
+      if (!s.plan.some(function (d) { return isSpecial(MAIN[d.m]); }) && dpool().some(isSpecial)) s.needFit = true;
       return s;
     }
   } catch (e) {}
@@ -700,23 +740,24 @@ function scaleIng(ing, f) {
   });
 }
 function leftoverFor(i) { return i < 6 && restOn(S.lunch, S.plan, i + 1); }
+function sc(ing, f) { return Math.abs(f - 1) < 0.02 ? ing : scaleIng(ing, f); }
 function dayParts(i) {
   if (offDay(i)) return [];
-  var d = S.plan[i], f = leftoverFor(i) ? 1.5 : 1, parts = [{ ing: f > 1 ? scaleIng(MAIN[d.m].ing, f) : MAIN[d.m].ing, src: i }];
-  if (d.v) parts.push({ ing: f > 1 ? scaleIng(VEG[d.v].ing, f) : VEG[d.v].ing, src: i });
+  var d = S.plan[i], f = (units() + (leftoverFor(i) ? lunchU() : 0)) / 3.4, parts = [{ ing: sc(MAIN[d.m].ing, f), src: i }];
+  if (d.v) parts.push({ ing: sc(VEG[d.v].ing, f), src: i });
   return parts;
 }
 function lunchParts(i) {
-  var d = S.lunch[i];
-  if (restOn(S.lunch, S.plan, i)) return [{ ing: KSIDE[d.ks].ing, src: 'L' + i }, { ing: STARCH[d.st].ing, src: 'L' + i }];
-  return [{ ing: LUNCH[d.l].ing, src: 'L' + i }, { ing: KSIDE[d.ks].ing, src: 'L' + i }, { ing: halfIng(VEG[d.v].ing), src: 'L' + i }];
+  var d = S.lunch[i], g = lunchU() / 1.7;
+  if (restOn(S.lunch, S.plan, i)) return [{ ing: sc(KSIDE[d.ks].ing, g), src: 'L' + i }, { ing: sc(STARCH[d.st].ing, g), src: 'L' + i }];
+  return [{ ing: sc(LUNCH[d.l].ing, g), src: 'L' + i }, { ing: sc(KSIDE[d.ks].ing, g), src: 'L' + i }, { ing: scaleIng(VEG[d.v].ing, 0.5 * g), src: 'L' + i }];
 }
 function weekItems() {
-  var parts = [];
+  var parts = [], bf = units() / 3.4;
   for (var i = 0; i < 7; i++) parts = parts.concat(dayParts(i));
   for (var k = 0; k < 7; k++) if (!S.lunch[k].off) parts = parts.concat(lunchParts(k));
   BASICS.forEach(function (b) {
-    if (!S.basicsOff[b.id]) parts.push({ ing: [I(b.n, b.q, b.u, b.r)], src: 'B' });
+    if (!S.basicsOff[b.id]) parts.push({ ing: sc([I(b.n, b.q, b.u, b.r)], bf), src: 'B' });
   });
   return agg(parts);
 }
@@ -842,11 +883,11 @@ function dayHtml(i) {
     '<div><div class="chips">' + chips + '</div>' +
     '<div class="hd"><h3>' + esc(m.nom) + '</h3>' + thumb(m.id, m, d.v) + '</div>' +
     '<p class="with">' + (v ? 'Avec : ' + esc(v.nom) : 'Légumes déjà dans le plat') + '</p>' +
-    (leftover ? '<p class="kid">Quantités prévues pour 6 : les restes (1 adulte, 1 enfant) feront le midi de demain. Dans les étapes, comptez la moitié en plus.</p>' : '') +
+    (leftover ? '<p class="kid">Quantités prévues avec les restes pour le midi de demain (' + lunchWho() + '). Dans les étapes, adaptez les quantités.</p>' : '') +
     '<div class="actions"><button class="btn small" data-act="swapmain" data-i="' + i + '">Changer le plat</button>' +
     (v ? '<button class="btn small" data-act="swapveg" data-i="' + i + '">Changer le légume</button>' : '') + '</div>' +
     '<details class="recipe" data-i="' + i + '"' + (openRecipes[i] ? ' open' : '') + '><summary>Recette et ingrédients</summary>' + photoCtl(m.id) +
-    '<h4>Ingrédients pour ' + (leftover ? '6 (4 ce soir, 2 pour demain midi)' : '4') + '</h4><ul class="ing">' + ingHtml + '</ul>' +
+    '<h4>Ingrédients pour ' + who() + (leftover ? ', plus le midi de demain' : '') + '</h4><ul class="ing">' + ingHtml + '</ul>' +
     (pantry.length ? '<p>À avoir chez vous : ' + esc(pantry.join(', ')) + '.</p>' : '') +
     '<h4>' + esc(m.nom) + '</h4>' + olHtml(m.steps) + side +
     '</details></div></article>';
@@ -902,8 +943,8 @@ function restLunchHtml(i, date) {
     '<button class="btn small" data-act="lunchrest" data-i="' + i + '">Un autre plat</button>' +
     '<button class="btn small" data-act="lunchoff" data-i="' + i + '">Pas ce jour-là</button></div>' +
     '<details class="recipe" data-l="' + i + '"' + (openLunch[i] ? ' open' : '') + '><summary>Préparation et ingrédients</summary>' +
-    '<h4>À acheter en plus (1 adulte, 1 enfant)</h4>' + (ing ? '<ul class="ing">' + ing + '</ul>' : '<p>Rien de plus : le pain complet fait partie de vos basiques.</p>') +
-    '<h4>La veille, au dîner</h4><ol><li>Avant de servir, mettez de côté 1 portion adulte et 1 portion enfant du plat et du légume dans une boîte hermétique.</li><li>Fermez la boîte une fois refroidie et placez-la au réfrigérateur.</li></ol>' +
+    '<h4>À acheter en plus (' + lunchWho() + ')</h4>' + (ing ? '<ul class="ing">' + ing + '</ul>' : '<p>Rien de plus : le pain complet fait partie de vos basiques.</p>') +
+    '<h4>La veille, au dîner</h4><ol><li>Avant de servir, mettez de côté la part du midi (' + lunchWho() + ') du plat et du légume dans une boîte hermétique.</li><li>Fermez la boîte une fois refroidie et placez-la au réfrigérateur.</li></ol>' +
     '<h4>' + esc(st.nom) + '</h4>' + olHtml(st.steps) +
     '<h4>' + esc(ks.nom) + '</h4>' + olHtml(ks.steps) +
     '</details></div></article>';
@@ -930,7 +971,7 @@ function lunchHtml(i) {
     (i > 0 && !MAIN[S.plan[i - 1].m].noRest ? '<button class="btn small" data-act="lunchrest" data-i="' + i + '">Restes d’hier soir</button>' : '') +
     '<button class="btn small" data-act="lunchoff" data-i="' + i + '">Pas ce jour-là</button></div>' +
     '<details class="recipe" data-l="' + i + '"' + (openLunch[i] ? ' open' : '') + '><summary>Recette et ingrédients</summary>' + photoCtl(l.id) +
-    '<h4>Ingrédients pour 2 (1 adulte, 1 enfant)</h4><ul class="ing">' + ing + '</ul>' +
+    '<h4>Ingrédients pour ' + lunchWho() + '</h4><ul class="ing">' + ing + '</ul>' +
     (pantry.length ? '<p>À avoir chez vous : ' + esc(pantry.join(', ')) + '.</p>' : '') +
     '<h4>' + esc(l.nom) + '</h4>' + olHtml(lunchSteps(l)) +
     '<h4>' + esc(lv.nom) + '</h4>' + olHtml(vegSteps(lv)) +
@@ -938,7 +979,7 @@ function lunchHtml(i) {
     '</details></div></article>';
 }
 function renderLunch() {
-  var h = '<section class="toolbar"><p class="hint" style="margin:0;flex:1;min-width:200px">Pour 1 adulte et 1 enfant, à emporter et à réchauffer. Par défaut, ce sont les restes du dîner de la veille, avec un féculent et une crudité : presque rien à préparer. Le lundi (pas de dîner la veille), un petit plat est proposé.</p>' +
+  var h = '<section class="toolbar"><p class="hint" style="margin:0;flex:1;min-width:200px">Pour ' + lunchWho() + ', à emporter et à réchauffer. Par défaut, ce sont les restes du dîner de la veille, avec un féculent et une crudité : presque rien à préparer. Le lundi (pas de dîner la veille), un petit plat est proposé.</p>' +
     '<button class="btn primary" data-act="regenlunch">Nouveaux midis</button></section>' + budgetHtml() + '<div class="days">';
   for (var i = 0; i < 7; i++) h += lunchHtml(i);
   h += '</div><p class="foot">Le midi : les restes du dîner (légume cuit, viande, poisson ou œufs) avec une crudité et un féculent (environ 5 cuillères à soupe cuites, ou 2 tranches de pain complet) et un laitage. Calories estimées pour une portion adulte ; les enfants gardent une portion normale.</p>';
@@ -995,6 +1036,7 @@ function renderList() {
 var app = document.getElementById('app');
 function render() {
   var tab = S.tab;
+  document.getElementById('sub').textContent = who() + ' · Drive Intermarché de Clermont-l’Hérault';
   ['menu', 'lunch', 'list'].forEach(function (t) { document.getElementById('tab-' + t).setAttribute('aria-selected', t === tab ? 'true' : 'false'); });
   var c = counts();
   document.getElementById('badge').textContent = String(Math.max(0, c.total - c.done));
@@ -1056,7 +1098,7 @@ function swapLunch(i) {
   });
   var cur = LUNCH[S.lunch[i].l];
   var cands = LUNCHES.filter(function (l) {
-    if (l.id === cur.id || used[l.id]) return false;
+    if (l.id === cur.id || used[l.id] || !softOk(l)) return false;
     if (l.rouge && rouges >= 1) return false;
     if (cur.t === 'poisson' && !fishOther && l.t !== 'poisson') return false;
     return true;
@@ -1090,29 +1132,44 @@ var LMODES = [['rest', 'Les restes de la veille', 'On cuisine un peu plus au dî
 var WDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 function openWiz() {
   var h = {}; APPS.forEach(function (a) { h[a[0]] = !!HAVE[a[0]]; });
-  W = { step: 0, have: h, max: TIMES.indexOf(S.maxMin) >= 0 ? S.maxMin : (S.maxMin > 90 ? 90 : 30), cook: COOK.slice(), lmode: LMODE, msg: '' };
+  W = { step: 0, have: h, max: TIMES.indexOf(S.maxMin) >= 0 ? S.maxMin : (S.maxMin > 90 ? 90 : 30), cook: COOK.slice(), lmode: LMODE, adults: ADULTS, kids: KIDS.slice(), dis: JSON.parse(JSON.stringify(DIS)), msg: '' };
   renderWiz();
 }
+function houseHtml() {
+  var stepper = function (label, n, minus, plus) {
+    return '<div class="wrow"><span>' + label + '</span><div class="wstep"><button data-act="' + minus + '" aria-label="Retirer">−</button><b>' + n + '</b><button data-act="' + plus + '" aria-label="Ajouter">+</button></div></div>';
+  };
+  var ages = W.kids.map(function (a, i) {
+    var opts = ''; for (var y = 1; y <= 17; y++) opts += '<option value="' + y + '"' + (y === a ? ' selected' : '') + '>' + y + (y > 1 ? ' ans' : ' an') + '</option>';
+    return '<label class="wrow">Âge de l’enfant ' + (i + 1) + '<select id="wk-' + i + '" data-wk="' + i + '">' + opts + '</select></label>';
+  }).join('');
+  return '<div class="whouse">' + stepper('Adultes', W.adults, 'wizadm', 'wizadp') + stepper('Enfants', W.kids.length, 'wizkm', 'wizkp') + ages + '</div>' +
+    '<h3 class="wh3">Ce que la famille n’aime pas</h3><p class="hint">Les plats, légumes et accompagnements qui en contiennent ne seront plus proposés.</p><div class="wchips">' +
+    DISL.map(function (d) { return '<button data-act="wizdis" data-id="' + d[0] + '" aria-pressed="' + (W.dis[d[0]] ? 'true' : 'false') + '">' + d[1] + '</button>'; }).join('') + '</div>' +
+    (W.kids.length > 1 ? '<p class="hint wnote">Le midi à emporter est compté pour 1 adulte et le premier enfant de la liste.</p>' : '');
+}
 function wizCanNext() {
-  if (W.step === 0) return W.have.four || W.have.cookeo || W.have.plaques || W.have.airfryer;
-  if (W.step === 2) return W.cook.some(Boolean);
+  if (W.step === 1) return W.have.four || W.have.cookeo || W.have.plaques || W.have.airfryer;
+  if (W.step === 3) return W.cook.some(Boolean);
   return true;
 }
 function renderWiz() {
   var el = document.getElementById('wiz');
   if (!W) { el.hidden = true; el.innerHTML = ''; document.body.style.overflow = ''; return; }
-  var titles = ['Qu’avez-vous dans votre cuisine ?', 'Combien de temps pour cuisiner ?', 'Quels soirs cuisinez-vous ?', 'Et le midi ?'];
-  var subs = ['Touchez vos appareils. Les recettes proposées n’utiliseront que ceux-là.', 'Un soir normal, cuisson comprise. Les plats plus longs sont écartés.', 'Les autres soirs, rien n’est prévu ni acheté : restes, repas libre ou à l’extérieur.', 'Pour 1 adulte et 1 enfant, à emporter.'];
+  var titles = ['Qui est à table ?', 'Qu’avez-vous dans votre cuisine ?', 'Combien de temps pour cuisiner ?', 'Quels soirs cuisinez-vous ?', 'Et le midi ?'];
+  var subs = ['Les quantités des recettes et de la liste de courses suivent le nombre de personnes et l’âge des enfants.', 'Touchez vos appareils. Les recettes proposées n’utiliseront que ceux-là.', 'Un soir normal, cuisson comprise. Les plats plus longs sont écartés.', 'Les autres soirs, rien n’est prévu ni acheté : restes, repas libre ou à l’extérieur.', 'Pour ' + (W.kids.length ? '1 adulte et 1 enfant' : '1 adulte') + ', à emporter.'];
   var body = '';
   if (W.step === 0) {
+    body = houseHtml();
+  } else if (W.step === 1) {
     body = '<div class="wgrid">' + APPS.map(function (a) {
       return '<button class="wtile" data-act="wizap" data-id="' + a[0] + '" aria-pressed="' + (W.have[a[0]] ? 'true' : 'false') + '"><svg viewBox="0 0 32 32" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[a[0]] + '</svg><span>' + a[1] + '</span></button>';
     }).join('') + '</div><p class="hint wnote">Il faut au moins un appareil de cuisson. Le micro-ondes sert à réchauffer les midis, le blender à lisser les purées.</p>';
-  } else if (W.step === 1) {
+  } else if (W.step === 2) {
     body = '<p class="wbig">' + W.max + '<small> minutes</small></p><div class="wseg">' + TIMES.map(function (t) {
       return '<button data-act="wiztime" data-v="' + t + '" aria-pressed="' + (t === W.max ? 'true' : 'false') + '">' + t + '</button>';
     }).join('') + '</div>';
-  } else if (W.step === 2) {
+  } else if (W.step === 3) {
     body = '<div class="wdays">' + WDAYS.map(function (d, i) {
       return '<button data-act="wizday" data-i="' + i + '" aria-pressed="' + (W.cook[i] ? 'true' : 'false') + '">' + d + '</button>';
     }).join('') + '</div>';
@@ -1125,21 +1182,23 @@ function renderWiz() {
   document.body.style.overflow = 'hidden';
   el.innerHTML = '<div class="winner"><div class="whead">' +
     (W.step > 0 ? '<button class="btn" data-act="wizback" aria-label="Étape précédente">←</button>' : (S.setup ? '<button class="btn" data-act="wizclose" aria-label="Fermer">✕</button>' : '')) +
-    '<div class="bar"><i style="width:' + ((W.step + 1) * 25) + '%"></i></div></div>' +
+    '<div class="bar"><i style="width:' + ((W.step + 1) * 20) + '%"></i></div></div>' +
     '<h2>' + titles[W.step] + '</h2><p class="wsub">' + subs[W.step] + '</p>' + body +
     (W.msg ? '<p class="wmsg" role="alert">' + esc(W.msg) + '</p>' : '') +
-    '<div class="wfoot"><button class="btn primary wgo" data-act="wiznext"' + (wizCanNext() ? '' : ' disabled') + '>' + (W.step === 3 ? 'Construire ma semaine' : 'Continuer') + '</button></div></div>';
+    '<div class="wfoot"><button class="btn primary wgo" data-act="wiznext"' + (wizCanNext() ? '' : ' disabled') + '>' + (W.step === 4 ? 'Construire ma semaine' : 'Continuer') + '</button></div></div>';
 }
 function finishWiz() {
-  var old = { h: HAVE, m: MAXMIN, c: COOK, l: LMODE };
+  var old = { h: HAVE, m: MAXMIN, c: COOK, l: LMODE, a: ADULTS, k: KIDS, d: DIS };
+  ADULTS = W.adults; KIDS = W.kids; DIS = W.dis;
   HAVE = W.have; COOK = W.cook; LMODE = W.lmode; MAXMIN = W.max;
   var tries = [W.max].concat([20, 30, 45, 60, 90, 999].filter(function (t) { return t > W.max; })), okT = 0;
   for (var k = 0; k < tries.length && !okT; k++) { MAXMIN = tries[k]; if (genPlan(newSeed()) || genPlan(newSeed())) okT = tries[k]; }
   if (!okT) {
-    HAVE = old.h; MAXMIN = old.m; COOK = old.c; LMODE = old.l;
-    W.step = 0; W.msg = 'Pas assez de recettes avec ces seuls appareils pour une semaine équilibrée. Ajoutez-en un (les plaques de cuisson ou le Cookeo, par exemple).';
+    HAVE = old.h; MAXMIN = old.m; COOK = old.c; LMODE = old.l; ADULTS = old.a; KIDS = old.k; DIS = old.d;
+    W.step = 0; W.msg = 'Pas assez de recettes avec ces choix pour remplir une semaine. Retirez un aliment de la liste « n’aime pas » ou ajoutez un appareil (les plaques de cuisson ou le Cookeo, par exemple).';
     renderWiz(); return;
   }
+  S.adults = ADULTS; S.kids = KIDS; S.dis = DIS;
   S.have = HAVE; S.cook = COOK; S.lmode = LMODE; S.maxMin = MAXMIN; S.setup = true;
   S.lunch = genLunch(newSeed()) || S.lunch;
   fitBudget();
@@ -1156,12 +1215,17 @@ document.addEventListener('click', function (e) {
     if (!W) return;
     W.msg = '';
     if (a === 'wizap') W.have[b.dataset.id] = !W.have[b.dataset.id];
+    else if (a === 'wizadm') W.adults = Math.max(1, W.adults - 1);
+    else if (a === 'wizadp') W.adults = Math.min(8, W.adults + 1);
+    else if (a === 'wizkm') W.kids.pop();
+    else if (a === 'wizkp') { if (W.kids.length < 8) W.kids.push(8); }
+    else if (a === 'wizdis') W.dis[b.dataset.id] = !W.dis[b.dataset.id];
     else if (a === 'wiztime') W.max = +b.dataset.v;
     else if (a === 'wizday') W.cook[+b.dataset.i] = !W.cook[+b.dataset.i];
     else if (a === 'wizlm') W.lmode = b.dataset.id;
     else if (a === 'wizback') W.step = Math.max(0, W.step - 1);
     else if (a === 'wizclose') W = null;
-    else if (a === 'wiznext') { if (!wizCanNext()) return; if (W.step === 3) { finishWiz(); return; } W.step++; }
+    else if (a === 'wiznext') { if (!wizCanNext()) return; if (W.step === 4) { finishWiz(); return; } W.step++; }
     renderWiz();
     return;
   }
@@ -1214,6 +1278,7 @@ document.addEventListener('change', function (e) {
     S.maxMin = parseInt(t.value, 10) || 30; MAXMIN = S.maxMin;
     fitBudget(); save(); render(); return;
   }
+  if (t.dataset && t.dataset.wk !== undefined) { if (W) W.kids[+t.dataset.wk] = parseInt(t.value, 10) || 8; return; }
   if (t.dataset && t.dataset.ph) { if (t.files && t.files[0]) addPhoto(t.dataset.ph, t.files[0]); return; }
   if (t.id === 'target' || t.id === 'reserve') {
     var num = parseInt(t.value, 10);

@@ -1,6 +1,6 @@
 # Semaine à table
 
-Menus de la semaine et liste de courses pour une famille de 4 (2 adultes, 2 enfants).
+Menus de la semaine et liste de courses pour la famille (nombre d’adultes et d’enfants au choix).
 
 - Dîners identiques pour tous, sans féculent, avec un légume cuit ; une viande rouge ou un poisson gras par semaine.
 - Midis à emporter : restes de la veille avec un féculent et une crudité, ou petit plat rapide.
