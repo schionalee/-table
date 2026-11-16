@@ -6,6 +6,7 @@ Menus de la semaine et liste de courses pour la famille (nombre d’adultes et d
 - Midis à emporter : restes de la veille avec un féculent et une crudité, ou petit plat rapide.
 - Recettes choisies selon les appareils de la cuisine (four, Cookeo, plaques, airfryer) et le temps disponible.
 - Budget calories d'un adulte, liste de courses classée par rayon.
+- Budget courses par semaine : menus choisis pour tenir dans le montant, coût estimé à partir de prix moyens de supermarché.
 
 Une seule page, sans installation : ouvrez `index.html`. Les réglages, la semaine en cours et vos photos restent enregistrés dans le navigateur de l'appareil.
 
